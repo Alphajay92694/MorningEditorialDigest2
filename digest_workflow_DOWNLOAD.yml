@@ -1,0 +1,39 @@
+name: Morning Article Pipeline Digest
+
+on:
+  schedule:
+    # 6:00 AM PT = 13:00 UTC (PDT, summer) / 14:00 UTC (PST, winter)
+    - cron: "0 13 * * *"
+  workflow_dispatch:  # manual trigger button in GitHub Actions UI
+
+jobs:
+  run-digest:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Run digest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python digest.py
+
+      - name: Commit digest to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add digests/
+          git diff --cached --quiet || git commit -m "digest: $(date +'%Y-%m-%d')"
+          git push
